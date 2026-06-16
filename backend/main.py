@@ -31,7 +31,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, StreamingResponse
 
 from core.config import Settings, get_settings
-from core.job_store import JobStore, get_job_store
+from backend.exporters.job_store import JobStore, get_job_store
 from core.logging import configure_logging, get_logger
 from core.report_builder import ReportBuilder
 from exporters.pdf_exporter import PDFExporter
