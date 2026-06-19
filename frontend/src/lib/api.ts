@@ -59,11 +59,29 @@ export function exportReportUrl(jobId: string): string {
 
 export async function downloadReportPdf(jobId: string, candidateName: string) {
   const res = await fetch(exportReportUrl(jobId), { method: "POST" });
+
   if (!res.ok) {
     const detail = await safeDetail(res);
-    throw new ApiError(detail ?? "Could not export PDF.", res.status);
+    throw new ApiError(detail ?? `Could not export PDF (status ${res.status}).`, res.status);
   }
+
+  // The export endpoint can return 200 with a non-PDF body in edge cases
+  // (e.g. a misconfigured proxy returning an HTML error page). Guard against
+  // silently "succeeding" and downloading a corrupt file.
+  const contentType = res.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/pdf")) {
+    const detail = await safeDetail(res);
+    throw new ApiError(
+      detail ?? "The server did not return a PDF. The export may have failed silently.",
+      res.status
+    );
+  }
+
   const blob = await res.blob();
+  if (blob.size === 0) {
+    throw new ApiError("The exported PDF was empty.", res.status);
+  }
+
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement("a");
   const safeName = candidateName.trim().replace(/\s+/g, "_") || "candidate";

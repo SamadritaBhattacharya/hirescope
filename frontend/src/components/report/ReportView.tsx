@@ -9,18 +9,24 @@ import { FlagsPanel } from "@/components/report/FlagsPanel";
 import { InterviewQuestions } from "@/components/report/InterviewQuestions";
 import { CommunityCard } from "@/components/report/CommunityCard";
 import { PartialErrorsNotice } from "@/components/report/PartialErrorsNotice";
-import { downloadReportPdf } from "@/lib/api";
+import { downloadReportPdf, ApiError } from "@/lib/api";
 import type { FullReport } from "@/types/api";
 
 export function ReportView({ report, onReset }: { report: FullReport; onReset: () => void }) {
   const [exporting, setExporting] = React.useState(false);
+  const [exportError, setExportError] = React.useState<string | null>(null);
 
   const handleExport = async () => {
     setExporting(true);
+    setExportError(null);
     try {
       await downloadReportPdf(report.job_id, report.candidate_name);
-    } catch {
-      // export failure is non-critical; the report remains visible on screen
+    } catch (err) {
+      const message =
+        err instanceof ApiError
+          ? err.message
+          : "Could not export the PDF. Check that the backend's PDF export dependency (WeasyPrint) is installed correctly.";
+      setExportError(message);
     } finally {
       setExporting(false);
     }
@@ -28,7 +34,13 @@ export function ReportView({ report, onReset }: { report: FullReport; onReset: (
 
   return (
     <div className="space-y-5">
-      <ReportHeader report={report} onExport={handleExport} exporting={exporting} onReset={onReset} />
+      <ReportHeader
+        report={report}
+        onExport={handleExport}
+        exporting={exporting}
+        exportError={exportError}
+        onReset={onReset}
+      />
 
       <SummaryCard summary={report.executive_summary} />
 
