@@ -3,6 +3,7 @@ import { getReport, startResearch, streamProgress, ApiError } from "@/lib/api";
 import { idleStatusMap, type StatusMap } from "@/components/pipeline/PipelineRail";
 import type {
   AgentName,
+  CompletedEventPayload,
   FullReport,
   JobStatus,
   ProgressEventPayload,
@@ -74,8 +75,9 @@ export function useResearchJob() {
               jobStatus: payload.job_status,
             }));
           } else if (eventType === "completed") {
-            setState((s) => ({ ...s, jobStatus: data.job_status }));
-            void finalize(res.job_id, data.job_status as JobStatus);
+            const payload = data as CompletedEventPayload;
+            setState((s) => ({ ...s, jobStatus: payload.job_status }));
+            void finalize(res.job_id, payload.job_status);
           }
         },
         onError: () => {
