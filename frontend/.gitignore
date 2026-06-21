@@ -23,3 +23,17 @@ dist-ssr
 *.sln
 *.sw?
 *.env/
+
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Environment variables — never commit real values
+.env
+.env.*
+!.env.example
+
+# Editor directories and files
+...(rest unchanged)

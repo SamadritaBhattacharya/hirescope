@@ -4,7 +4,25 @@ import type {
   ResearchJobResponse,
 } from "@/types/api";
 
-const API_BASE = "/api/v1";
+// Full backend URL, including the /api/v1 prefix — set via VITE_API_BASE_URL
+// in .env (local dev) or in the Vercel project's Environment Variables
+// (production). No dev-server proxy or vercel.json rewrite involved; the
+// frontend calls the backend directly and relies on the backend's CORS_ORIGINS
+// setting to allow it.
+const RAW_BASE = import.meta.env.VITE_API_BASE_URL;
+
+if (!RAW_BASE) {
+  // Fails loudly at build/dev-start time rather than producing confusing
+  // "Failed to fetch" errors deep in a network tab later.
+  throw new Error(
+    "VITE_API_BASE_URL is not set. Add it to .env (local) or to the " +
+      "Vercel project's Environment Variables (production), e.g. " +
+      "VITE_API_BASE_URL=https://your-backend.onrender.com/api/v1"
+  );
+}
+
+// Strip any trailing slash so callers can safely do `${API_BASE}/report/...`
+const API_BASE = RAW_BASE.replace(/\/+$/, "");
 
 export class ApiError extends Error {
   status: number;
@@ -65,9 +83,6 @@ export async function downloadReportPdf(jobId: string, candidateName: string) {
     throw new ApiError(detail ?? `Could not export PDF (status ${res.status}).`, res.status);
   }
 
-  // The export endpoint can return 200 with a non-PDF body in edge cases
-  // (e.g. a misconfigured proxy returning an HTML error page). Guard against
-  // silently "succeeding" and downloading a corrupt file.
   const contentType = res.headers.get("content-type") ?? "";
   if (!contentType.includes("application/pdf")) {
     const detail = await safeDetail(res);
@@ -102,14 +117,6 @@ async function safeDetail(res: Response): Promise<string | null> {
   }
 }
 
-/**
- * Opens the SSE progress stream for a job.
- * Returns a cleanup function to close the connection.
- *
- * Uses raw fetch + ReadableStream parsing rather than EventSource because
- * EventSource cannot be cancelled/cleaned up as predictably across browsers
- * and we want a single code path for both proxied dev and same-origin prod.
- */
 export function streamProgress(
   jobId: string,
   handlers: {
@@ -137,7 +144,6 @@ export function streamProgress(
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
 
-        // SSE frames are separated by a blank line
         const frames = buffer.split("\n\n");
         buffer = frames.pop() ?? "";
 
