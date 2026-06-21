@@ -16,6 +16,21 @@ langchain-community==0.2.12
 chromadb==0.5.5
 sentence-transformers==3.0.1
 
+# Pin the OpenTelemetry family together (same release train) so pip's
+# resolver doesn't backtrack through every version trying to satisfy
+# chromadb's loose transitive constraints — this is what was causing
+# the long "Collecting opentelemetry_sdk-1.4x.0... 1.39.0... 1.38.0..."
+# loop in the build log.
+opentelemetry-api==1.27.0
+opentelemetry-sdk==1.27.0
+opentelemetry-exporter-otlp-proto-common==1.27.0
+opentelemetry-exporter-otlp-proto-grpc==1.27.0
+opentelemetry-proto==1.27.0
+
+# onnxruntime (a chromadb dependency) requires this floor — pin it too,
+# otherwise pip backtracks across protobuf versions as well.
+protobuf>=4.25.8,<5
+
 # === LLM APIs ===
 groq==0.9.0
 
